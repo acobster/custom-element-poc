@@ -1,0 +1,14 @@
+/* some style */
+
+my-special {
+  display: block;
+  box-sizing: border-box;
+  width: 50em;
+  max-width: 96%;
+  margin: 1em auto;
+  padding: 1em;
+  border: 1px dashed grey;
+}
+h1 {
+  color: red;
+}
