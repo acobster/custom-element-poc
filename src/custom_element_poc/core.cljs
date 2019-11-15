@@ -1,5 +1,6 @@
 (ns custom-element-poc.core
-    (:require ))
+  (:require
+    [vdom.core :as vdom]))
 
 (enable-console-print!)
 
@@ -95,51 +96,34 @@
 (defn attach-shadow [elem init]
   (.attachShadow elem (clj->js init)))
 
-(defn render [[tag & children :as html]]
-  (cond
-    (string? html)
-    (if-not (empty? html)
-      (js/document.createTextNode html))
-
-    ; create a non-empty HTMLElement with innerText or child elements
-    :else
-    (let [[tag & children] html
-          elem (js/document.createElement (name tag))]
-      (if (coll? children)
-        (doseq [child children]
-          (if-let [child-node (render child)]
-            (.appendChild elem child-node)))
-        (set! (.-innerText elem) children))
-      elem)))
-
-(defn defcomponent [tag component-fn]
+(defn defcomponent [component-fn]
   (let [component (fn component []
                     (let [custom-elem
                           (js/Reflect.construct js/HTMLElement #js [] component)
                           shadow
-                          (attach-shadow custom-elem #js {:mode "open"})]
-                      (.appendChild shadow (render (component-fn)))))]
+                          (attach-shadow custom-elem #js {:mode "open"})
+                          render
+                          (vdom/renderer shadow)]
+
+                      (render (component-fn))))]
 
     ; extend the HTMLElement class
     (set! (.-prototype component) (js/Object.create (.-prototype js/HTMLElement)))
 
-    ; register the custom component
-    (js/window.customElements.define tag component)
-
     component))
+
+(def define-custom-element!
+  (memoize
+    (fn [tag component]
+      (js/window.customElements.define tag component)
+      component)))
+
 
 
 (defn my-component []
-  [:div
-   [:h2 "My component"]
-   [:p "Lorem ipsum"]])
-
-
-(defcomponent "my-special" my-component)
-
-
-
-;(set! (.-prototype.-constructor Rectangle) Rectangle)
+  [:div {}
+   [:h2 {} "My component"]
+   [:p {} "Lorem ipsum"]])
 
 ;                        #js {:foo #js {:configurable true
 ;                                       :writable true
@@ -151,6 +135,7 @@
 ;                                                          (* (.-x this) (.-y this))))}}))
 ;
 
+(define-custom-element! "my-special" (defcomponent my-component))
 
 
 (defn on-js-reload []
